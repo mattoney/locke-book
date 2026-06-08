@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Locke — A Little Book of Big Love</title>
+<style>
+  :root{
+    --bg: oklch(0.21 0.012 70);
+    --panel: oklch(0.26 0.014 70);
+    --panel-2: oklch(0.30 0.016 70);
+    --ink: oklch(0.95 0.01 80);
+    --ink-soft: oklch(0.78 0.02 80);
+    --ink-dim: oklch(0.62 0.02 80);
+    --accent: oklch(0.78 0.14 65);
+    --line: oklch(0.36 0.014 70);
+    --star: oklch(0.84 0.15 85);
+    --shadow: 0 18px 50px oklch(0.12 0.02 70 / 0.55);
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{ margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; display:flex; flex-direction:column; min-height:100vh; min-height:100dvh; }
+  header{ display:flex; align-items:center; gap:12px; padding:12px 18px; padding-top:max(12px, env(safe-area-inset-top)); border-bottom:1px solid var(--line); background:var(--panel); }
+  header h1{ font-size:14px; font-weight:650; letter-spacing:.02em; margin:0; color:var(--ink-soft); }
+  header .spacer{ flex:1; }
+  .btn{ appearance:none; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); padding:8px 13px; border-radius:9px; font-size:13px; font-weight:550; cursor:pointer; }
+  .btn:active{ background:oklch(0.34 0.018 70); }
+
+  main{ flex:1; display:flex; flex-direction:column; min-height:0; }
+  .stage{ flex:1; display:flex; flex-direction:column; min-height:0; padding:14px 18px 4px; }
+  .meta{ display:flex; align-items:center; gap:14px; justify-content:center; margin-bottom:6px; }
+  .meta .pg{ font-weight:700; font-size:14px; color:var(--accent); letter-spacing:.04em; text-transform:uppercase; min-width:88px; text-align:center; }
+  .meta .arrow{ border:1px solid var(--line); background:var(--panel-2); color:var(--ink); width:40px; height:40px; border-radius:10px; font-size:20px; cursor:pointer; flex:0 0 auto; }
+  .vcount{ text-align:center; font-size:12.5px; color:var(--ink-dim); margin:-2px 0 8px; min-height:1em; }
+  .ptext{ max-width:64ch; margin:0 auto 12px; text-align:center; color:var(--ink); font-size:18px; line-height:1.45; }
+
+  .row{ flex:1; display:flex; gap:16px; align-items:center; justify-content:center; min-height:0; }
+  .item{ flex:1 1 0; min-width:0; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+  .item .imgwrap{ flex:1; min-height:0; display:flex; align-items:center; justify-content:center; width:100%; }
+  .item img{ max-width:100%; max-height:100%; object-fit:contain; border-radius:12px; box-shadow:var(--shadow); background:var(--panel); cursor:zoom-in; }
+  .item .cap{ font-size:12px; color:var(--ink-dim); display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .item .star{ border:1px solid var(--line); background:var(--panel-2); color:var(--ink-dim); font-size:13px; padding:4px 11px; border-radius:8px; cursor:pointer; }
+  .item .star.on{ color:var(--star); border-color:var(--star); }
+  .item.win img{ outline:3px solid var(--star); outline-offset:2px; }
+
+  .thumbs{ display:flex; gap:9px; overflow-x:auto; padding:12px 18px calc(16px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); background:var(--panel); -webkit-overflow-scrolling:touch; }
+  .thumb{ position:relative; flex:0 0 auto; width:84px; height:84px; border-radius:9px; overflow:hidden; border:2px solid transparent; cursor:pointer; background:var(--panel-2); }
+  .thumb.active{ border-color:var(--accent); }
+  .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .thumb .badge{ position:absolute; left:4px; bottom:4px; font-size:10.5px; font-weight:650; background:oklch(0.18 0.02 70 / .82); color:var(--ink-soft); padding:1px 5px; border-radius:5px; }
+  .thumb .multi{ position:absolute; right:4px; bottom:4px; font-size:10px; font-weight:650; background:var(--accent); color:oklch(0.2 0.02 70); padding:1px 5px; border-radius:5px; }
+
+  .drawer{ padding:0 18px; max-height:0; overflow:hidden; transition:max-height .25s ease; background:var(--panel); }
+  .drawer.open{ max-height:50vh; overflow:auto; border-top:1px solid var(--line); padding:14px 18px; }
+  .drawer h2{ font-size:13px; color:var(--ink-soft); margin:0 0 8px; }
+  .drawer ul{ margin:0; padding-left:18px; color:var(--ink-soft); font-size:13.5px; }
+  .drawer .none{ color:var(--ink-dim); font-size:13.5px; }
+
+  .lightbox{ position:fixed; inset:0; background:oklch(0.12 0.02 70 / .94); display:none; align-items:center; justify-content:center; z-index:60; cursor:zoom-out; padding:16px; }
+  .lightbox.show{ display:flex; }
+  .lightbox img{ max-width:100%; max-height:100%; object-fit:contain; border-radius:10px; }
+
+  @media (max-width:720px){
+    .ptext{ font-size:16px; margin-bottom:10px; }
+    .row{ flex-direction:column; align-items:stretch; gap:14px; overflow-y:auto; padding-bottom:6px; }
+    .item{ flex:0 0 auto; height:auto; }
+    .item .imgwrap{ height:auto; }
+    .item img{ max-height:74vh; }
+    .thumb{ width:72px; height:72px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Locke · A Little Book of Big Love</h1>
+  <span class="spacer"></span>
+  <button class="btn" id="winnersBtn">★ Favorites</button>
+</header>
+
+<main>
+  <div class="stage" id="stage">
+    <div class="meta">
+      <button class="arrow" id="prev" aria-label="Previous page">‹</button>
+      <span class="pg" id="pg"></span>
+      <button class="arrow" id="next" aria-label="Next page">›</button>
+    </div>
+    <div class="vcount" id="vcount"></div>
+    <div class="ptext" id="ptext"></div>
+    <div class="row" id="row"></div>
+  </div>
+  <div class="drawer" id="drawer"><h2>Starred favorites</h2><div id="winnersList"></div></div>
+  <div class="thumbs" id="thumbs"></div>
+</main>
+
+<div class="lightbox" id="lightbox"><img id="lightboxImg" alt="" /></div>
+
+<script>
+const DIR = "generated/";
+const FILES = [
+  "page-01.png","page-02.png","page-03.png","page-04.png","page-05.png","page-06.png",
+  "page-07.png","page-08.png","page-09.png","page-10a.png","page-10b.png","page-11.png",
+  "page-12.png","page-12-v2.png","page-13.png","page-14.png",
+  "page-15.png","page-15-v2.png","page-15-v3.png","page-16.png","page-16-v2.png",
+  "page-17.png","page-17-v2.png","page-17-v3.png"
+];
+const PAGE_TEXT = {
+  1:"Before Locke was Locke, his mom carried him everywhere she went. She already knew he'd be the luckiest little guy in the world.",
+  2:"From his very first days, Locke had a best mate looking out for him. Tito kept watch while the little one slept, even if he did have to share his cuddles now.",
+  3:"The day Locke met his godparents, Auntie Thai-Thai and Uncle Matt fell for him on the spot. One little look, and that was that.",
+  4:"When Uncle Matt found out he was Locke's godfather, he lifted the little guy up to the sky. Locke laughed and laughed.",
+  5:"Locke went hunting for the best pumpkin in the patch. Turned out, it was him. Mom and Dad's littlest pumpkin, in his coolest (and crookedest) shades.",
+  6:"At Allan's new place, the party went all night, and so did Locke. Everyone wanted a turn to hold him. John even hired him to be the face of Torqued Sportfishing.",
+  7:"Some nights, Auntie Thai-Thai and Uncle Matt would stop by just to say goodnight. They could never stay away from their Locke.",
+  8:"And oh, the little things they loved. Like how, after a long day, Locke could sleep in any position. He didn't always APPEAR to be comfortable, but he was as comfortable as could be.",
+  9:"And his little Brazil shirt, worn proud for Auntie Thai-Thai. Go Brasil!",
+  10:"At his first nogfest, Locke got passed from arm to arm, Auntie Thai-Thai to Uncle Matt and back. He tried a little nog, too. Well, mostly he chewed the cup, because Locke would chew on just about anything.",
+  11:"At Christmas, they all bundled up to walk through the lights. Locke didn't say much. He just stared up at all the colors, and at his favorite people.",
+  12:"Dad and Locke set off to explore, riding high in the backpack. Both wore their most serious faces. Big adventures are serious business.",
+  13:"Uncle Matt and Locke loved to play on the floor, rolling and giggling and pulling silly faces. Matt might have come away with a tiny scratch. He didn't mind one bit.",
+  14:"Auntie Thai-Thai and Uncle Matt met all their friends at the bar. But the second everyone saw Locke, he stole the whole show. Who could look at anyone else?",
+  15:"Auntie Thai-Thai held him close and breathed him in. “I love you so much, little Locke,” she whispered.",
+  16:"Locke even had his very own kingdom of people who loved him. He was the littlest knight of all time, and the bravest.",
+  17:"After a big day and an even bigger lunch, Locke grinned his biggest grin of all. The happiest, most-loved little guy in the whole wide world."
+};
+
+const $ = id => document.getElementById(id);
+const pageNumOf = n => { const m=n.toLowerCase().match(/^page-0*(\d+)/); return m?parseInt(m[1],10):9999; };
+const naturalKey = s => s.replace(/\d+/g, d => d.padStart(6,'0'));
+const winners = () => { try{ return JSON.parse(localStorage.getItem('locke_favs')||'{}'); }catch(e){ return {}; } };
+const isWinner = n => !!winners()[n];
+function toggleWinner(n){ const w=winners(); if(w[n]) delete w[n]; else w[n]=true; localStorage.setItem('locke_favs', JSON.stringify(w)); }
+
+const map=new Map();
+for(const f of FILES){ const k=pageNumOf(f); if(!map.has(k)) map.set(k,[]); map.get(k).push(f); }
+const pages=[...map.keys()].sort((a,b)=>a-b).map(k=>({num:k===9999?null:k, items:map.get(k).sort((a,b)=>naturalKey(a).localeCompare(naturalKey(b)))}));
+let cur=0;
+
+function setPage(i){
+  cur=(i+pages.length)%pages.length;
+  const pg=pages[cur];
+  $('pg').textContent = pg.num ? ('Page '+pg.num) : '—';
+  $('vcount').textContent = pg.items.length>1 ? (pg.items.length+' options — tap ☆ to pick your favorite') : '';
+  $('ptext').textContent = pg.num && PAGE_TEXT[pg.num] ? PAGE_TEXT[pg.num] : '';
+  const row=$('row'); row.innerHTML='';
+  pg.items.forEach(name=>{
+    const src=DIR+name;
+    const fig=document.createElement('div'); fig.className='item'+(isWinner(name)?' win':'');
+    const wrap=document.createElement('div'); wrap.className='imgwrap';
+    const img=document.createElement('img'); img.src=src; img.alt='Page '+(pg.num||''); img.loading='eager';
+    img.onclick=()=>{ $('lightboxImg').src=src; $('lightbox').classList.add('show'); };
+    wrap.appendChild(img);
+    const cap=document.createElement('div'); cap.className='cap';
+    const star=document.createElement('button'); star.className='star'+(isWinner(name)?' on':''); star.textContent=isWinner(name)?'★ favorite':'☆ pick';
+    star.onclick=()=>{ toggleWinner(name); setPage(cur); renderThumbs(); renderWinnersList(); };
+    cap.appendChild(star);
+    fig.appendChild(wrap); fig.appendChild(cap);
+    row.appendChild(fig);
+  });
+  [...document.querySelectorAll('.thumb')].forEach((el,idx)=>el.classList.toggle('active',idx===cur));
+  const a=document.querySelector('.thumb.active'); if(a) a.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
+}
+
+const repItem = pg => pg.items.find(n=>isWinner(n)) || pg.items[0];
+function renderThumbs(){
+  const wrap=$('thumbs'); wrap.innerHTML='';
+  pages.forEach((pg,idx)=>{
+    const d=document.createElement('div'); d.className='thumb';
+    d.innerHTML='<img loading="lazy" src="'+DIR+repItem(pg)+'" alt=""><span class="badge">'+(pg.num?('P'+pg.num):'?')+'</span>'+(pg.items.length>1?'<span class="multi">×'+pg.items.length+'</span>':'');
+    d.onclick=()=>setPage(idx);
+    wrap.appendChild(d);
+  });
+}
+function renderWinnersList(){
+  const w=winners(); const names=Object.keys(w).sort((a,b)=>naturalKey(a).localeCompare(naturalKey(b)));
+  $('winnersList').innerHTML = names.length ? '<ul>'+names.map(n=>'<li>'+n+'</li>').join('')+'</ul>' : '<div class="none">No favorites yet. Open a page and tap ☆ pick.</div>';
+}
+
+$('prev').onclick=()=>setPage(cur-1);
+$('next').onclick=()=>setPage(cur+1);
+$('winnersBtn').onclick=()=>{ $('drawer').classList.toggle('open'); renderWinnersList(); };
+$('lightbox').onclick=()=>$('lightbox').classList.remove('show');
+document.addEventListener('keydown',e=>{
+  if($('lightbox').classList.contains('show')){ if(e.key==='Escape')$('lightbox').classList.remove('show'); return; }
+  if(e.key==='ArrowLeft')setPage(cur-1); else if(e.key==='ArrowRight')setPage(cur+1);
+});
+// swipe for page nav (horizontal only)
+let sx=0,sy=0;
+$('stage').addEventListener('touchstart',e=>{ sx=e.touches[0].clientX; sy=e.touches[0].clientY; },{passive:true});
+$('stage').addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+  if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5){ setPage(cur + (dx<0?1:-1)); }
+},{passive:true});
+
+renderThumbs();
+setPage(0);
+</script>
+</body>
+</html>
