@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Locke — Editor's Cut</title>
+<style>
+  :root{
+    --paper:#fbf7ef; --page:#fffdf8; --ink:#2b2620; --muted:#8a7f6f;
+    --accent:#c2703d; --note-bg:#fff6dc; --note-edge:#e3b94f;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display:flex; flex-direction:column; min-height:100vh;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 22px; flex:0 0 auto;
+  }
+  header .title{font-weight:700; letter-spacing:.02em;}
+  header .title small{color:var(--muted); font-weight:500; margin-left:8px;}
+  .toggle{
+    display:flex; align-items:center; gap:8px; cursor:pointer;
+    font-size:13px; color:var(--muted); user-select:none;
+    border:1px solid #d8cfc0; border-radius:20px; padding:6px 14px; background:#fff;
+  }
+  .toggle .dot{width:10px; height:10px; border-radius:50%; background:#cfc6b6; transition:background .2s;}
+  body.notes-on .toggle .dot{background:var(--note-edge);}
+  body.notes-on .toggle{border-color:var(--note-edge); color:#7a611c;}
+
+  .stage{
+    flex:1 1 auto; display:flex; align-items:center; justify-content:center;
+    padding:0 64px 8px; perspective:2200px; min-height:0;
+  }
+  .leaf{
+    background:var(--page);
+    border-radius:10px;
+    box-shadow:0 1px 2px rgba(60,45,20,.10), 0 14px 44px rgba(60,45,20,.16);
+    width:min(880px, 100%);
+    max-height:100%;
+    padding:30px 44px 34px;
+    display:flex; flex-direction:column; align-items:center; gap:18px;
+    overflow-y:auto;
+    transition:transform .28s ease, opacity .28s ease;
+  }
+  .leaf.out-left {transform-origin:left center;  transform:rotateY(-58deg) translateX(-30px); opacity:0;}
+  .leaf.in-right {transform-origin:right center; transform:rotateY(46deg) translateX(30px); opacity:0; transition:none;}
+  .leaf.out-right{transform-origin:right center; transform:rotateY(58deg) translateX(30px); opacity:0;}
+  .leaf.in-left  {transform-origin:left center;  transform:rotateY(-46deg) translateX(-30px); opacity:0; transition:none;}
+
+  .art{display:flex; gap:14px; justify-content:center; align-items:center; max-width:100%;}
+  .art img{
+    max-height:56vh; max-width:100%; border-radius:6px; display:block;
+    box-shadow:0 2px 10px rgba(60,45,20,.18);
+  }
+  .art.spread img{max-height:46vh; max-width:49%;}
+
+  .caption{
+    font-family:Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-size:20px; line-height:1.55; text-align:center; max-width:58ch;
+  }
+  .caption p{margin:4px 0;}
+  .caption strong{color:#9a4f1e;}
+  .pagenum{font-size:12px; color:var(--muted); letter-spacing:.08em;}
+
+  .note{
+    display:none; max-width:62ch; background:var(--note-bg);
+    border-left:3px solid var(--note-edge); border-radius:6px;
+    padding:12px 16px; font-size:13.5px; line-height:1.5; color:#5d4d22;
+  }
+  body.notes-on .note{display:block;}
+  .badge{
+    display:inline-block; font-size:10px; font-weight:700; letter-spacing:.1em;
+    padding:2px 8px; border-radius:10px; margin-right:8px; vertical-align:1px;
+  }
+  .badge.kept{background:#e4efdd; color:#4a6b35;}
+  .badge.polish{background:#fdeed3; color:#9a6b1c;}
+  .badge.rewrite{background:#fbdfd2; color:#a04a1d;}
+  .badge.moved{background:#e7e0f3; color:#5d4496;}
+
+  /* cover + end slides */
+  .cover{justify-content:center; text-align:center; gap:14px;}
+  .cover h1{font-family:Georgia, serif; font-size:54px; letter-spacing:.01em;}
+  .cover .sub{color:var(--muted); font-size:16px;}
+  .cover .hint{color:var(--muted); font-size:13px; margin-top:18px;}
+  .cover ul{
+    text-align:left; max-width:60ch; font-size:15px; line-height:1.65;
+    color:var(--ink); list-style:none;
+  }
+  .cover ul li{padding-left:1.2em; text-indent:-1.2em; margin:6px 0;}
+  .cover ul li::before{content:"· "; color:var(--accent); font-weight:700;}
+
+  .arrow{
+    position:fixed; top:50%; transform:translateY(-50%);
+    width:46px; height:46px; border-radius:50%; border:1px solid #d8cfc0;
+    background:#fff; color:var(--ink); font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(60,45,20,.10); z-index:5;
+  }
+  .arrow:hover{background:var(--page);}
+  .arrow.prev{left:14px;} .arrow.next{right:14px;}
+  .arrow:disabled{opacity:.25; cursor:default;}
+
+  footer{
+    flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+    gap:5px; padding:12px 0 16px;
+  }
+  .dotnav{width:9px; height:9px; border-radius:50%; background:#ddd3c2; border:none; cursor:pointer; padding:0;}
+  .dotnav.on{background:var(--accent);}
+  .dotnav.special{border-radius:2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">Locke <small>· Editor's Cut — recommended order &amp; copy</small></div>
+  <div class="toggle" id="noteToggle"><span class="dot"></span> Editor's notes</div>
+</header>
+
+<div class="stage"><div class="leaf" id="leaf"></div></div>
+
+<button class="arrow prev" id="prev" aria-label="Previous page">‹</button>
+<button class="arrow next" id="next" aria-label="Next page">›</button>
+
+<footer id="dots"></footer>
+
+<script>
+const BADGES = {
+  kept:    '<span class="badge kept">Kept</span>',
+  polish:  '<span class="badge polish">Polished</span>',
+  rewrite: '<span class="badge rewrite">Rewritten</span>',
+  moved:   '<span class="badge moved">Moved + rewritten</span>',
+};
+
+const SLIDES = [
+{ cover:true, html:`
+  <h1>Locke</h1>
+  <div class="sub">The Editor's Cut — every page in recommended order, with recommended copy.</div>
+  <ul>
+    <li>Beach and high chair are <b>swapped</b>, so "the big day" leads to "an even bigger lunch."</li>
+    <li>The bookend refrain now lands on the <b>actual last page</b> — the book stops ending three times.</li>
+    <li>The missing <b>closing lines</b> are written, using the "up / reaching" motif the art already carries.</li>
+    <li>The middle is <b>threaded</b> — fewer "At the…" album openers, the "And…" spine carried further.</li>
+    <li>Page 6 now tells the <b>joke its picture was already telling</b>. Allan and John are cut.</li>
+    <li>Incidental "little"s are pruned so the refrain owns the word. 8 pages are untouched.</li>
+  </ul>
+  <div class="hint">→ / ← or click the arrows to turn · toggle <b>Editor's notes</b> (top right) to see the why per page</div>
+`},
+
+{ num:1, img:'generated/page-01.png',
+  cap:[`Before Locke was Locke, his mom carried him everywhere she went.`,
+       `She already knew he'd be the <strong>luckiest little guy in the whole wide world</strong>.`],
+  badge:'polish',
+  note:`One change: "in the world" → "in the whole wide world," so the opening promise and the final page's refrain echo exactly. Everything else untouched — this is the best opening line in the book, and "carried him everywhere" quietly plants the story's real arc.`},
+
+{ num:2, img:'generated/page-02.png',
+  cap:[`From his very first days, Locke had a best mate looking out for him.`,
+       `Tito kept watch while the baby slept, even if he did have to share his cuddles now.`],
+  badge:'polish',
+  note:`"The little one" → "the baby." The old draft said "little" on ten pages; pruning the incidental ones protects the refrain. Everything else kept.`},
+
+{ num:3, img:'generated/page-03.png',
+  cap:[`The day Locke met his godparents, Auntie Thai-Thai and Uncle Matt fell for him on the spot.`,
+       `One little look, and that was that.`],
+  badge:'kept',
+  note:`Untouched. "One little look, and that was that" is narrator voice, not caption voice — and this "little" earns its keep.`},
+
+{ num:4, img:'generated/page-04.png',
+  cap:[`When Uncle Matt found out he was Locke's godfather, he lifted him up, up, up to the sky.`,
+       `Locke laughed and laughed.`],
+  badge:'polish',
+  note:`"Lifted the little guy up to the sky" → "lifted him up, up, up to the sky." Better read-aloud rhythm, prunes a "little," and starts the book's "up" motif on purpose — it pays off on the last page.`},
+
+{ num:5, img:'generated/page-05.png',
+  cap:[`Locke went hunting for the best pumpkin in the patch.`,
+       `Turned out, it was him.`,
+       `Mom and Dad's littlest pumpkin, in his coolest (and crookedest) shades.`],
+  badge:'kept',
+  note:`Untouched. "Turned out, it was him" is exactly the register the whole book should hit.`},
+
+{ num:6, img:'generated/page-06.png',
+  cap:[`The party went all night, and so did Locke. Everyone wanted a turn to hold him.`,
+       `Then came the hat.`,
+       `Locke wasn't so sure about the hat.`],
+  badge:'rewrite',
+  note:`The old text claimed party joy while the picture shows a wide-eyed baby under an enormous hat — that gap IS the joke, so the text now reports his actual feeling (the Bluey move: "But she might be a little"). Allan and John are cut: names a child listener can't place read as album captions, and the hat gag is the whole page.`},
+
+{ num:7, img:'generated/page-07.png',
+  cap:[`Some nights, Auntie Thai-Thai and Uncle Matt would stop by just to say goodnight.`,
+       `They could never stay away from their Locke.`],
+  badge:'kept',
+  note:`Untouched. A quiet page right after a loud one — the pacing is doing its job.`},
+
+{ num:8, img:'generated/page-08.png',
+  cap:[`And oh, the little things they all loved.`,
+       `Like how, after a long day, Locke could sleep in any position. He didn't always APPEAR to be comfortable, but he was as comfortable as could be.`],
+  badge:'polish',
+  note:`"They loved" → "they all loved": after the party page, "they" should mean everybody, not just the godparents. This page launches the "And…" thread; "little things" keeps its "little" — it's load-bearing here.`},
+
+{ num:9, img:'generated/page-09.png',
+  cap:[`And his little Brazil shirt, worn proud for Auntie Thai-Thai.`,
+       `Go Brasil!`],
+  badge:'kept',
+  note:`Untouched. Second beat of the "And…" thread.`},
+
+{ num:10, imgs:['generated/page-10a.png','generated/page-10b.png'],
+  cap:[`At his first nogfest, Locke got passed from arm to arm, Auntie Thai-Thai to Uncle Matt and back.`,
+       `He tried the nog, too. Well, mostly he chewed the cup.`,
+       `Locke would chew on just about anything.`],
+  badge:'polish',
+  note:`"A little nog" → "the nog" (pruning), and the chew line gets its own beat — the dry standalone "Locke would chew on just about anything" reads funnier aloud. "Nogfest" stays: it's the one insider word that explains itself, and it's charming.`},
+
+{ num:11, img:'generated/page-11.png',
+  cap:[`When Christmas came, everyone bundled up to walk through the lights.`,
+       `Locke didn't say much. He just stared up at all the colors, and at his favorite people.`],
+  badge:'polish',
+  note:`"At Christmas" → "When Christmas came" — one less album-divider opener; the page now flows out of the nogfest night instead of starting over. "Stared up" stays: it's the up motif again.`},
+
+{ num:12, img:'generated/page-12.png',
+  cap:[`Dad and Locke set off to explore, riding high in the backpack.`,
+       `Both wore their most serious faces. Big adventures are serious business.`],
+  badge:'kept',
+  note:`Untouched. "Riding high" carries the motif, and "Big adventures are serious business" is the book's best aside.`},
+
+{ num:13, img:'generated/page-13.png',
+  cap:[`Uncle Matt and Locke loved to play on the floor, rolling and giggling and pulling silly faces.`,
+       `Matt might have come away with a tiny scratch. He didn't mind one bit.`],
+  badge:'kept',
+  note:`Untouched.`},
+
+{ num:14, img:'generated/page-14.png',
+  cap:[`Auntie Thai-Thai and Uncle Matt met all their friends at the bar.`,
+       `But the second everyone saw Locke, he stole the whole show.`,
+       `Who could look at anyone else?`],
+  badge:'kept',
+  note:`Untouched. The narrator question is a welcome change of texture this late in the book.`},
+
+{ num:15, img:'generated/page-15.png',
+  cap:[`Auntie Thai-Thai held him close and breathed him in.`,
+       `"I love you so much, little Locke," she whispered.`],
+  badge:'kept',
+  note:`Untouched. The only dialogue in the book, saved for the emotional peak — exactly right. This "little" is sacred.`},
+
+{ num:16, img:'generated/page-17.png',
+  cap:[`By summer, Locke was on the move, all by himself.`,
+       `He reached up and let a fistful of sand fly, just to see where it would go.`,
+       `It was a very big day.`],
+  badge:'moved',
+  note:`Swapped ahead of the high chair (which also honors Thais's original "beach before the high chair"). The new text claims the growth arc the pictures already tell — page 1, his mom carried him everywhere; here, he moves all by himself — and describes what's actually painted: the fistful of sand mid-air. The last line is a handoff: turn the page and "the big day" continues.`},
+
+{ num:17, img:'generated/page-16.png',
+  cap:[`After the big day came an even bigger lunch.`,
+       `And after the lunch came Locke's biggest grin of all.`],
+  badge:'moved',
+  note:`Now follows the beach, so "the big day" is literal — the two pages become one afternoon. The refrain moves off this page to the finale, where it belongs; in its place, an escalation ladder (big day → bigger lunch → biggest grin) that the toothless grin pays off. The book stops ending three times.`},
+
+{ num:18, img:'generated/page-18.png',
+  cap:[`Because all along, Locke had a whole kingdom of people who loved him.`,
+       `The littlest knight of all time, and the bravest.`,
+       `And whenever he reached up, somebody reached back.`,
+       `<strong>The happiest, most-loved little guy in the whole wide world.</strong>`],
+  badge:'rewrite',
+  note:`The ending the book was missing. "Because all along" answers page 1's promise; the knight line stays for the costumes (and for Thais); "whenever he reached up, somebody reached back" closes the up/arms motif — he reached up at the sky one page ago, and a kingdom answers — without ever stating a moral. And the bookend refrain finally lands on the actual last page.`},
+
+{ cover:true, html:`
+  <h1 style="font-size:34px;">What changed, in one breath</h1>
+  <ul>
+    <li><b>Structure:</b> beach ↔ high chair swapped; refrain moved from the high chair to the final page; closing lines written for the kingdom finale.</li>
+    <li><b>Thread:</b> "And…" spine kept on pages 8–9; "At Christmas" → "When Christmas came"; the beach hands off to the high chair mid-thought.</li>
+    <li><b>Jokes:</b> page 6 now plays the picture's actual gag (the hat, and how he feels about it).</li>
+    <li><b>Diction:</b> Allan and John cut; incidental "little"s pruned on pages 2, 4, 10 so the refrain owns the word; page 1 now echoes the refrain's "whole wide world" exactly.</li>
+    <li><b>Untouched:</b> pages 3, 5, 7, 9, 12, 13, 14, 15 — eight pages were already right.</li>
+  </ul>
+  <div class="hint">Flag what you disagree with and I'll fold your calls into manuscript draft v2.</div>
+`},
+];
+
+const leaf = document.getElementById('leaf');
+const dots = document.getElementById('dots');
+let cur = 0, busy = false;
+
+SLIDES.forEach((s,i)=>{
+  const b=document.createElement('button');
+  b.className='dotnav'+(s.cover?' special':'');
+  b.onclick=()=>go(i, i>cur?'fwd':'back');
+  dots.appendChild(b);
+});
+
+function render(i){
+  const s=SLIDES[i];
+  if(s.cover){
+    leaf.classList.add('cover');
+    leaf.innerHTML=s.html;
+  } else {
+    leaf.classList.remove('cover');
+    const art = s.imgs
+      ? `<div class="art spread"><img src="${s.imgs[0]}" alt=""><img src="${s.imgs[1]}" alt=""></div>`
+      : `<div class="art"><img src="${s.img}" alt=""></div>`;
+    leaf.innerHTML = art
+      + `<div class="caption">${s.cap.map(l=>`<p>${l}</p>`).join('')}</div>`
+      + `<div class="pagenum">PAGE ${s.num} OF 18</div>`
+      + `<div class="note">${BADGES[s.badge]||''}${s.note}</div>`;
+  }
+  [...dots.children].forEach((d,k)=>d.classList.toggle('on',k===i));
+  document.getElementById('prev').disabled = i===0;
+  document.getElementById('next').disabled = i===SLIDES.length-1;
+}
+
+function go(i,dir){
+  if(busy || i<0 || i>=SLIDES.length || i===cur) return;
+  busy=true;
+  leaf.classList.add(dir==='fwd'?'out-left':'out-right');
+  setTimeout(()=>{
+    render(i); cur=i;
+    leaf.classList.remove('out-left','out-right');
+    leaf.classList.add(dir==='fwd'?'in-right':'in-left');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      leaf.style.transition='transform .28s ease, opacity .28s ease';
+      leaf.classList.remove('in-right','in-left');
+      setTimeout(()=>{leaf.style.transition=''; busy=false;},290);
+    }));
+  },285);
+}
+
+document.getElementById('next').onclick=()=>go(cur+1,'fwd');
+document.getElementById('prev').onclick=()=>go(cur-1,'back');
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' ') {e.preventDefault(); go(cur+1,'fwd');}
+  if(e.key==='ArrowLeft') {e.preventDefault(); go(cur-1,'back');}
+});
+document.getElementById('noteToggle').onclick=()=>document.body.classList.toggle('notes-on');
+
+SLIDES.forEach(s=>{ (s.imgs||[s.img]).filter(Boolean).forEach(src=>{const im=new Image(); im.src=src;}); });
+render(0);
+</script>
+</body>
+</html>
